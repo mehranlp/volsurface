@@ -1,6 +1,8 @@
 streamlit
-yfinance==0.2.32
+yfinance
 pandas
 numpy
 scipy
 plotly
+jax
+jaxlib
