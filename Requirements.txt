@@ -1,9 +1,6 @@
-streamlit
-yfinance
-jax
-jaxlib
-pandas
-numpy
-matplotlib
-scipy
-plotly
+streamlit==1.34.0
+yfinance==0.2.36
+numpy==1.26.4
+pandas==2.2.2
+plotly==5.20.0
+scipy==1.13.0
