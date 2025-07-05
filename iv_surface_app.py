@@ -1,7 +1,3 @@
-import subprocess
-subprocess.run(["pip", "install", "yfinance"])
-
-import yfinance as yf
 # ============================ #
 #        IMPORT LIBRARIES     #
 # ============================ #
