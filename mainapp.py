@@ -81,21 +81,26 @@ with st.sidebar:
 
     date_limit = st.slider("Max Expiration Dates", 1, 10, 5)
 
+    st.markdown("🔗 [Connect with me on LinkedIn](https://www.linkedin.com/in/mehran-p/)")
+
     generate = st.button("Generate IV Surface")
 
 # === Main Logic === #
 if generate:
     try:
         ticker = yf.Ticker(ticker_input)
+
+        # Spot price
         spot_data = ticker.history(period='1d')
         if spot_data.empty:
             st.error("No spot price data available for this ticker.")
             st.stop()
-
         spot = spot_data['Close'][-1]
+
+        # Option chain dates
         all_dates = ticker.options
         if not all_dates:
-            st.error("No option chain available.")
+            st.error("No option chain available – choose another ticker.")
             st.stop()
 
         dates = all_dates[:date_limit]
