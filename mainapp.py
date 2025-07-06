@@ -52,7 +52,23 @@ st.title("Implied Volatility Surface Dashboard")
 with st.sidebar:
     st.header("Parameters")
 
-    ticker_input = st.text_input("Ticker Symbol", value="SPY")
+    ticker_options = {
+        "Apple (AAPL)": "AAPL",
+        "Microsoft (MSFT)": "MSFT",
+        "NVIDIA (NVDA)": "NVDA",
+        "SPDR S&P 500 ETF (SPY)": "SPY",
+        "Invesco QQQ (QQQ)": "QQQ",
+        "MicroStrategy (MSTR)": "MSTR",
+        "GameStop (GME)": "GME",
+        "Real Estate ETF (XLRE)": "XLRE",
+        "Tesla (TSLA)": "TSLA",
+        "Meta (META)": "META"
+    }
+    selected_label = st.selectbox("Select Ticker", list(ticker_options.keys()))
+    ticker_input = ticker_options[selected_label]
+
+    option_type = st.selectbox("Option Type", ["Call", "Put"])
+    otype = "call" if option_type == "Call" else "put"
 
     r_input = st.slider(
         "Risk-free Rate (Annualized)",
@@ -70,9 +86,18 @@ with st.sidebar:
 # === Main Logic === #
 if generate:
     try:
-        ticker = yf.Ticker(ticker_input.upper())
-        spot = ticker.history(period='1d')['Close'][-1]
+        ticker = yf.Ticker(ticker_input)
+        spot_data = ticker.history(period='1d')
+        if spot_data.empty:
+            st.error("No spot price data available for this ticker.")
+            st.stop()
+
+        spot = spot_data['Close'][-1]
         all_dates = ticker.options
+        if not all_dates:
+            st.error("No option chain available.")
+            st.stop()
+
         dates = all_dates[:date_limit]
 
         moneyness = []
@@ -81,7 +106,8 @@ if generate:
 
         for date in dates:
             try:
-                call_chain = ticker.option_chain(date).calls
+                chain = ticker.option_chain(date)
+                options_df = chain.calls if otype == "call" else chain.puts
             except:
                 continue
 
@@ -91,7 +117,7 @@ if generate:
             if T <= 0:
                 continue
 
-            for _, row in call_chain.iterrows():
+            for _, row in options_df.iterrows():
                 strike = row.get('strike')
                 market_price = row.get('lastPrice')
 
@@ -100,7 +126,7 @@ if generate:
                     continue
 
                 try:
-                    iv = solve_for_iv(S=spot, K=strike, T=T, r=r_input, price=market_price)
+                    iv = solve_for_iv(S=spot, K=strike, T=T, r=r_input, price=market_price, otype=otype)
                     if np.isnan(iv) or iv <= 0 or iv > 5:
                         continue
                     m = spot / strike
@@ -117,7 +143,7 @@ if generate:
         st.markdown(f"**Data points:** {len(moneyness)} &nbsp;|&nbsp; Unique moneyness: {len(np.unique(moneyness))} &nbsp;|&nbsp; Unique expirations: {len(np.unique(dtes))}")
 
         if len(moneyness) < 3 or len(np.unique(moneyness)) < 3 or len(np.unique(dtes)) < 3:
-            st.warning(" Not enough diverse data points to plot the surface.")
+            st.warning("Not enough diverse data points to plot the surface.")
         else:
             # Interpolation for smoother surface
             from scipy.interpolate import griddata
@@ -150,11 +176,11 @@ if generate:
                     yaxis_title="Days to Expiry",
                     zaxis_title="Implied Volatility"
                 ),
-                title="Interactive Implied Volatility Surface",
+                title=f"IV Surface for {ticker_input} ({option_type})",
                 margin=dict(l=20, r=20, b=20, t=40)
             )
 
             st.plotly_chart(fig, use_container_width=False)
 
     except Exception as e:
-        st.error(f" Error: {e}")
+        st.error(f"Error: {e}")
